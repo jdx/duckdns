@@ -13,9 +13,8 @@ notify(){
     -title DuckDNS \
     -subtitle "$1" \
     -message "$2" \
-    \ # -group duckdns \
-    -sender ~/code/duckdns/duckdns \
-    -sound default
+    -sender ~/src/duckdns/duckdns
+    # -sound default
 
   # osascript -e "display notification \"$1\" with title \"DuckDNS\""
 }
@@ -31,7 +30,7 @@ cmd(){
     --fail \
     --show-error \
     "https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&verbose=true")
-  # echo "$output" > ~/code/duckdns/http.log
+  # echo "$output" > ~/src/duckdns/http.log
   case "$output" in
     "KO"*)        notify "ERROR"     "$output" ;;
     *"UPDATED"*)  notify "UPDATED"   "$output" ;;
