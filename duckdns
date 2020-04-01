@@ -5,6 +5,9 @@ trap 'rc=$?; echo "EXIT (rc: $rc)"; exit $rc' EXIT
 set -u
 set -E # export trap to functions
 
+# add homebrew path
+PATH="$PATH:/usr/local/bin"
+
 notify(){
   terminal-notifier \
     -title DuckDNS \
@@ -20,13 +23,15 @@ notify(){
 cmd(){
   # shellcheck source=/Users/jeffd/.config/duckdns
   source "$HOME/.config/duckdns"
-  /System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport -I | grep -e "SSID: stinkbox" || return
+  if [[ ${DUCKDNS_SSID+x} ]]; then
+    /System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport -I | grep -e "SSID: $DUCKDNS_SSID" || return
+  fi
   output=$(curl \
     --silent \
     --fail \
     --show-error \
     "https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&verbose=true")
-  echo "$output" > ~/code/duckdns/http.log
+  # echo "$output" > ~/code/duckdns/http.log
   case "$output" in
     "KO"*)        notify "ERROR"     "$output" ;;
     *"UPDATED"*)  notify "UPDATED"   "$output" ;;
@@ -37,7 +42,7 @@ cmd(){
 
 oops(){
   rc=$?
-  notify "$@"
+  notify "ERROR" "$@"
   return $rc # provoke ERR trap
 }
 
