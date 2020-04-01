@@ -1,0 +1,48 @@
+#!/bin/bash
+
+trap 'rc=$?; echo "ERR at line ${LINENO} (rc: $rc)"; exit $rc' ERR
+trap 'rc=$?; echo "EXIT (rc: $rc)"; exit $rc' EXIT
+set -u
+set -E # export trap to functions
+
+notify(){
+  terminal-notifier \
+    -title DuckDNS \
+    -subtitle "$1" \
+    -message "$2" \
+    \ # -group duckdns \
+    -sender ~/code/duckdns/duckdns \
+    -sound default
+
+  # osascript -e "display notification \"$1\" with title \"DuckDNS\""
+}
+
+cmd(){
+  # shellcheck source=/Users/jeffd/.config/duckdns
+  source "$HOME/.config/duckdns"
+  /System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport -I | grep -e "SSID: stinkbox" || return
+  output=$(curl \
+    --silent \
+    --fail \
+    --show-error \
+    "https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&verbose=true")
+  echo "$output" > ~/code/duckdns/http.log
+  case "$output" in
+    "KO"*)        notify "ERROR"     "$output" ;;
+    *"UPDATED"*)  notify "UPDATED"   "$output" ;;
+    *"NOCHANGE"*) echo               "$output" ;;
+    *)            notify "???"       "$output"
+  esac
+}
+
+oops(){
+  rc=$?
+  notify "$@"
+  return $rc # provoke ERR trap
+}
+
+exec 3>&1 # copy stdin to use in $()
+if output=$(cmd "$@" 2>&1 >&3) # collect stderr, not stdout
+then    echo "ok"
+else    oops "fail: $output"
+fi
